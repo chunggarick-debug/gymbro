@@ -394,6 +394,72 @@ function matchFoodDB(name) {
   return hit || null;
 }
 
+// 修改辨識結果（款式/份量/單位/營養）
+function openPhotoEdit(item, onSave) {
+  const options = store.allFoods(state).map(f => `<option value="${f.name}"></option>`).join('');
+  openModal(`
+    <button class="close" data-close>✕</button>
+    <h3>✏️ 修改辨識結果</h3>
+    <label class="field"><span>食物名稱（可輸入或選擇）</span>
+      <input id="pe-name" value="${item.name}" list="pe-food-list" />
+      <datalist id="pe-food-list">${options}</datalist>
+    </label>
+    <div style="display:flex;gap:8px;align-items:center;margin:12px 0">
+      <button class="btn ghost" data-step="-1">−</button>
+      <span id="pe-amt" style="flex:1;text-align:center;font-size:26px;font-weight:800">${item.amount}</span>
+      <button class="btn ghost" data-step="1">＋</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <label class="field"><span>單位</span><input id="pe-unit" value="${item.unit}" /></label>
+      <label class="field"><span>熱量/份 (kcal)</span><input type="number" id="pe-kcal" value="${item.kcal}" /></label>
+      <label class="field"><span>蛋白質/份 (g)</span><input type="number" id="pe-p" value="${item.protein}" /></label>
+      <label class="field"><span>碳水/份 (g)</span><input type="number" id="pe-c" value="${item.carbs}" /></label>
+      <label class="field"><span>脂肪/份 (g)</span><input type="number" id="pe-f" value="${item.fat}" /></label>
+    </div>
+    <button class="btn primary full" data-save-edit>儲存修改</button>
+  `);
+
+  let amt = Number(item.amount) || 1;
+  let emoji = item.emoji;
+  const syncAmount = () => { $('#pe-amt').textContent = amt; };
+
+  $('#modal').querySelectorAll('[data-step]').forEach(b => b.onclick = () => {
+    amt = Math.max(0.25, Math.round((amt + Number(b.dataset.step)) * 4) / 4);
+    syncAmount();
+  });
+
+  $('#pe-name').addEventListener('change', () => {
+    const db = matchFoodDB($('#pe-name').value);
+    if (db) {
+      emoji = db.emoji;
+      $('#pe-unit').value = db.unit;
+      $('#pe-kcal').value = db.kcal;
+      $('#pe-p').value = db.protein;
+      $('#pe-c').value = db.carbs;
+      $('#pe-f').value = db.fat;
+    }
+  });
+
+  $('#modal').querySelector('[data-save-edit]').onclick = () => {
+    const name = $('#pe-name').value.trim() || item.name;
+    const db = matchFoodDB(name);
+    if (db) emoji = db.emoji;
+    onSave({
+      name,
+      emoji,
+      unit: $('#pe-unit').value.trim() || '份',
+      amount: amt,
+      kcal: Number($('#pe-kcal').value) || 0,
+      protein: Number($('#pe-p').value) || 0,
+      carbs: Number($('#pe-c').value) || 0,
+      fat: Number($('#pe-f').value) || 0,
+      matched: !!db,
+    });
+    closeModal();
+    toast('✅ 已修改');
+  };
+}
+
 // 拍照流程
 function onPhoto() {
   openModal(`
@@ -429,16 +495,29 @@ function onPhoto() {
         const a = Math.max(0.1, Number(f.amount) || 1);
         return { name: f.name, emoji: '📷', unit: f.unit, amount: a, kcal: (f.kcal || 0) / a, protein: (f.protein || 0) / a, carbs: (f.carbs || 0) / a, fat: (f.fat || 0) / a, matched: false };
       });
-      $('#photo-result').innerHTML = `<p class="hint">辨識結果（✅ = 已用資料庫精準數值），㩒一下加入：</p>` + items.map((f, i) =>
-        `<button class="voice-result-item" data-pfood="${i}"><span>${f.emoji} ${f.name}${f.matched ? ' ✅' : ''} ×${f.amount} ${f.unit}</span><span style="color:var(--muted)">${Math.round(f.kcal * f.amount)} kcal</span></button>`
-      ).join('') + `<button class="btn primary full" style="margin-top:10px" data-addall>全部加入</button>`;
-      $('#photo-result').querySelectorAll('[data-pfood]').forEach(b => b.onclick = () => {
-        const f = items[Number(b.dataset.pfood)];
-        addMealEntry(f, f.amount, 'photo', f.unit);
-        toast(`✅ 已記錄 ${f.name}`);
-      });
-      const addAll = $('#photo-result').querySelector('[data-addall]');
-      if (addAll) addAll.onclick = () => { items.forEach(f => addMealEntry(f, f.amount, 'photo', f.unit)); closeModal(); };
+
+      const renderResults = () => {
+        $('#photo-result').innerHTML = `<p class="hint">辨識結果（✅=資料庫精準 · 㩒「加入」記錄 · 㩒「✏️」改款式/份量）：</p>` + items.map((f, i) =>
+          `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <button class="voice-result-item" style="flex:1" data-pfood="${i}"><span>${f.emoji} ${f.name}${f.matched ? ' ✅' : ''} ×${f.amount} ${f.unit}</span><span style="color:var(--muted)">${Math.round(f.kcal * f.amount)} kcal</span></button>
+            <button class="btn ghost" data-edit="${i}" title="修改款式/份量">✏️</button>
+          </div>`
+        ).join('') + `<button class="btn primary full" style="margin-top:10px" data-addall>全部加入</button>`;
+
+        $('#photo-result').querySelectorAll('[data-pfood]').forEach(b => b.onclick = () => {
+          const f = items[Number(b.dataset.pfood)];
+          addMealEntry(f, f.amount, 'photo', f.unit);
+          toast(`✅ 已記錄 ${f.name}`);
+        });
+        $('#photo-result').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => {
+          const idx = Number(b.dataset.edit);
+          openPhotoEdit(items[idx], (updated) => { items[idx] = updated; renderResults(); });
+        });
+        const addAll = $('#photo-result').querySelector('[data-addall]');
+        if (addAll) addAll.onclick = () => { items.forEach(f => addMealEntry(f, f.amount, 'photo', f.unit)); closeModal(); };
+      };
+
+      renderResults();
     } catch (e) {
       $('#photo-result').innerHTML = `<p style="color:var(--red);margin-top:10px;white-space:pre-wrap">${e.message}</p>
         <p class="hint">未設定金鑰？去「設定」貼上 API Key。</p>`;
