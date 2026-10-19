@@ -541,9 +541,90 @@ function lastSetForExercise(name) {
   return { weight: '', reps: '' };
 }
 
-function openWorkoutSession(tplId) {
-  const tpl = WORKOUT_TEMPLATES.find(t => t.id === tplId);
-  if (!tpl) return;
+function exerciseLibrary() {
+  const seen = new Set();
+  const list = [];
+  for (const t of WORKOUT_TEMPLATES) {
+    for (const ex of t.exercises) {
+      if (!seen.has(ex.name)) { seen.add(ex.name); list.push({ name: ex.name, sets: ex.sets, reps: ex.reps }); }
+    }
+  }
+  return list;
+}
+
+function openExercisePicker(tpl) {
+  const selected = new Map(); // 預設全部不選取
+  const lib = exerciseLibrary();
+  const tplSets = (name) => {
+    const e = tpl.exercises.find(x => x.name === name) || lib.find(x => x.name === name);
+    return e ? { sets: e.sets, reps: e.reps } : { sets: 3, reps: 10 };
+  };
+
+  openModal(`
+    <button class="close" data-close>✕</button>
+    <h3>🏋️ 自訂今日動作 — ${tpl.emoji} ${tpl.name}</h3>
+    <p class="hint">㩒一下選取／取消動作；下面可搜尋加入其他動作。</p>
+    <div id="picker-list" class="category-tabs" style="margin-top:4px"></div>
+    <div class="search-row" style="margin-top:12px"><input type="search" id="picker-search" placeholder="＋ 搜尋加入其他動作…（例如 飛鳥）" /></div>
+    <div id="picker-add" class="category-tabs"></div>
+    <div class="list-head" style="margin-top:12px"><h2>已選動作</h2><span id="picker-count">0 個</span></div>
+    <div id="picker-selected" class="category-tabs"></div>
+    <button class="btn primary full" style="margin-top:12px" data-start>開始訓練</button>
+  `);
+
+  const render = () => {
+    // 模板動作（預設未選，點一下選取／再點取消）
+    $('#picker-list').innerHTML = tpl.exercises.map(e => {
+      const on = selected.has(e.name);
+      return `<button class="cat-tab ${on ? 'active' : ''}" data-toggle="${e.name}">${on ? '✅' : '＋'} ${e.name} · ${e.sets}×${e.reps}</button>`;
+    }).join('');
+    $('#picker-list').querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => {
+      const name = b.dataset.toggle;
+      if (selected.has(name)) { selected.delete(name); }
+      else { const s = tplSets(name); selected.set(name, { name, sets: s.sets, reps: s.reps }); }
+      render();
+    });
+
+    // 已選清單（可移除）
+    const entries = [...selected.values()];
+    $('#picker-count').textContent = entries.length + ' 個';
+    $('#picker-selected').innerHTML = entries.map(e =>
+      `<button class="cat-tab active" data-remove="${e.name}">✅ ${e.name} ✕</button>`
+    ).join('') || `<p class="hint">未選擇任何動作。</p>`;
+    $('#picker-selected').querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
+      selected.delete(b.dataset.remove);
+      render();
+    });
+
+    renderAdd();
+  };
+
+  const renderAdd = () => {
+    const q = ($('#picker-search').value || '').trim();
+    if (!q) { $('#picker-add').innerHTML = ''; return; }
+    const matches = lib.filter(e => e.name.includes(q) && !selected.has(e.name)).slice(0, 8);
+    $('#picker-add').innerHTML = matches.map(e =>
+      `<button class="cat-tab" data-add="${e.name}">＋ ${e.name} · ${e.sets}×${e.reps}</button>`
+    ).join('') || `<p class="hint">搵唔到「${q}」。</p>`;
+    $('#picker-add').querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+      const ex = lib.find(e => e.name === b.dataset.add);
+      if (ex) { selected.set(ex.name, { name: ex.name, sets: ex.sets, reps: ex.reps }); render(); }
+    });
+  };
+
+  $('#picker-search').addEventListener('input', renderAdd);
+
+  $('#modal').querySelector('[data-start]').onclick = () => {
+    const exercises = [...selected.values()];
+    if (!exercises.length) { toast('請至少選擇一個動作'); return; }
+    closeModal();
+    openWorkoutSession({ name: tpl.name, emoji: tpl.emoji, exercises });
+  };
+
+  render();
+}
+
+function openWorkoutSession(tpl) {
   openModal(`
     <button class="close" data-close>✕</button>
     <h3>${tpl.emoji} ${tpl.name}</h3>
@@ -583,7 +664,7 @@ function openWorkoutSession(tplId) {
       });
       exercises.push({ name, sets });
     });
-    const workout = { id: store.uid(), templateId: tpl.id, templateName: tpl.name, emoji: tpl.emoji, exercises, time: new Date().toISOString() };
+    const workout = { id: store.uid(), templateId: tpl.id || 'custom', templateName: tpl.name, emoji: tpl.emoji, exercises, time: new Date().toISOString() };
     store.addWorkout(state, store.todayKey(), workout);
     const before = JSON.stringify(state.stats.prs);
     store.updatePRs(state, workout);
@@ -731,7 +812,7 @@ function bindEvents() {
   // 訓練
   $('#template-grid').addEventListener('click', e => {
     const t = e.target.closest('[data-tpl]');
-    if (t) openWorkoutSession(t.dataset.tpl);
+    if (t) { const tpl = WORKOUT_TEMPLATES.find(x => x.id === t.dataset.tpl); if (tpl) openExercisePicker(tpl); }
   });
 
   // 進度
