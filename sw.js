@@ -1,5 +1,5 @@
 // GymBro.AI Service Worker — 網路優先、離線回退（確保更新即時）
-const CACHE = 'gymbro-v2';
+const CACHE = 'gymbro-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -32,7 +32,7 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return; // 外部請求（API）不介入
 
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-store' })
       .then((resp) => {
         const copy = resp.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
