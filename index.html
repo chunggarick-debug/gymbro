@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="GymBro.AI — 記錄只要幾秒的健身＋飲食 App" />
+  <title>GymBro.AI</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 頂部 -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo">💪</span>
+        <div>
+          <h1>GymBro.AI</h1>
+          <p id="header-date" class="header-date"></p>
+        </div>
+      </div>
+      <div class="header-stats">
+        <span class="chip streak-chip" id="header-streak" title="連續打卡">🔥 0</span>
+        <span class="chip level-chip" id="header-level" title="等級">Lv.1</span>
+      </div>
+    </header>
+
+    <!-- 主內容 -->
+    <main class="main">
+      <!-- 今天 -->
+      <section class="view active" id="view-today">
+        <div class="xp-bar-wrap">
+          <div class="xp-bar"><div class="xp-bar-fill" id="xp-bar-fill"></div></div>
+          <span class="xp-text" id="xp-text">0 / 100 XP</span>
+        </div>
+
+        <div class="battle-card" id="battle-card">
+          <div class="battle-head">
+            <span class="battle-title">⚔️ 擊敗昨天的自己</span>
+            <span class="battle-status" id="battle-status"></span>
+          </div>
+          <div class="battle-scores">
+            <div class="battle-side">
+              <span class="battle-label">昨天</span>
+              <span class="battle-score" id="battle-yesterday">0</span>
+            </div>
+            <div class="battle-vs">VS</div>
+            <div class="battle-side">
+              <span class="battle-label">今天</span>
+              <span class="battle-score" id="battle-today">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="qa-btn qa-voice" data-action="voice"><span>🎤</span>語音記錄</button>
+          <button class="qa-btn qa-photo" data-action="photo"><span>📷</span>拍照記錄</button>
+          <button class="qa-btn qa-quick" data-action="quick"><span>⚡</span>快速記</button>
+          <button class="qa-btn qa-workout" data-action="workout"><span>🏋️</span>開始訓練</button>
+        </div>
+
+        <div class="today-summary card">
+          <h2>今日概覽</h2>
+          <div class="macro-bar-row">
+            <div class="macro-bar" id="cal-bar"><div class="macro-fill cal" id="cal-fill"></div></div>
+            <span class="macro-num" id="cal-num">0 / 2000 kcal</span>
+          </div>
+          <div class="macro-bar-row">
+            <div class="macro-bar" id="protein-bar"><div class="macro-fill protein" id="protein-fill"></div></div>
+            <span class="macro-num" id="protein-num">0 / 120 g 蛋白質</span>
+          </div>
+          <div class="macro-mini" id="macro-mini"></div>
+          <div class="today-lists">
+            <div id="today-meals" class="today-list"></div>
+            <div id="today-workouts" class="today-list"></div>
+          </div>
+        </div>
+
+        <div class="card challenge-card">
+          <h2>🎯 本週挑戰</h2>
+          <p id="challenge-title"></p>
+          <div class="macro-bar-row">
+            <div class="macro-bar"><div class="macro-fill challenge" id="challenge-fill"></div></div>
+            <span class="macro-num" id="challenge-num"></span>
+          </div>
+        </div>
+
+        <div class="card coach-card">
+          <h2>🤖 AI 教練</h2>
+          <p id="coach-tip" class="coach-tip"></p>
+        </div>
+      </section>
+
+      <!-- 飲食 -->
+      <section class="view" id="view-diet">
+        <div class="card">
+          <h2>今天吃了什麼？</h2>
+          <div class="search-row">
+            <input type="search" id="diet-search" placeholder="搜尋食物…（例如 叉燒、凍奶茶）" />
+          </div>
+          <div class="category-tabs" id="diet-categories"></div>
+          <div class="food-grid" id="food-grid"></div>
+          <p class="hint" id="diet-empty">找不到嗎？可以點下方「＋自訂食物」。</p>
+          <button class="btn ghost full" id="btn-add-custom-food">＋ 自訂食物</button>
+        </div>
+        <div class="card">
+          <div class="list-head"><h2>今日紀錄</h2><span id="diet-total"></span></div>
+          <div id="diet-log" class="log-list"></div>
+        </div>
+      </section>
+
+      <!-- 訓練 -->
+      <section class="view" id="view-workout">
+        <div class="card">
+          <h2>選擇課表</h2>
+          <div id="template-grid" class="template-grid"></div>
+        </div>
+        <div class="card">
+          <div class="list-head"><h2>最近訓練</h2></div>
+          <div id="workout-history" class="log-list"></div>
+        </div>
+      </section>
+
+      <!-- 進度 -->
+      <section class="view" id="view-progress">
+        <div class="card">
+          <h2>📈 力量曲線</h2>
+          <div class="chart-wrap">
+            <select id="pr-exercise-select" class="select"></select>
+            <div id="pr-chart" class="chart"></div>
+          </div>
+          <div id="pr-list" class="pr-list"></div>
+        </div>
+        <div class="card">
+          <h2>🥗 近 7 天熱量／蛋白質</h2>
+          <div id="week-chart" class="chart"></div>
+        </div>
+        <div class="card">
+          <h2>🏅 成就牆</h2>
+          <div id="badges-grid" class="badges-grid"></div>
+        </div>
+        <div class="card">
+          <h2>📊 我的數據</h2>
+          <div id="stats-grid" class="stats-grid"></div>
+        </div>
+      </section>
+
+      <!-- 設定 -->
+      <section class="view" id="view-settings">
+        <div class="card">
+          <h2>個人目標</h2>
+          <label class="field">
+            <span>你的名字</span>
+            <input type="text" id="set-name" placeholder="例如：小明" />
+          </label>
+          <label class="field">
+            <span>每日熱量目標 (kcal)</span>
+            <input type="number" id="set-calories" min="800" max="8000" step="50" />
+          </label>
+          <label class="field">
+            <span>每日蛋白質目標 (g)</span>
+            <input type="number" id="set-protein" min="20" max="400" step="5" />
+          </label>
+          <button class="btn primary full" id="btn-save-settings">儲存目標</button>
+        </div>
+        <div class="card">
+          <h2>📷 拍照 AI 辨識</h2>
+          <p class="hint">可選 DeepSeek 或 Google Gemini 做食物辨識。沒有金鑰也能用手動／語音記錄。</p>
+          <label class="field">
+            <span>AI 服務</span>
+            <select id="set-provider" class="select">
+              <option value="deepseek">DeepSeek（deepseek-flash，支援圖片）</option>
+              <option value="gemini">Google Gemini</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>API Key</span>
+            <input type="password" id="set-apikey" placeholder="DeepSeek: sk-… / Gemini: AIza…" autocomplete="off" />
+          </label>
+          <button class="btn primary full" id="btn-save-apikey">儲存設定</button>
+        </div>
+        <div class="card">
+          <h2>資料</h2>
+          <div class="row-actions">
+            <button class="btn ghost" id="btn-export">匯出備份</button>
+            <button class="btn ghost" id="btn-import">匯入備份</button>
+            <button class="btn danger" id="btn-reset">清除全部</button>
+          </div>
+          <input type="file" id="import-file" accept="application/json" hidden />
+        </div>
+        <p class="footer-note">GymBro.AI v1 · 資料只存在你這個瀏覽器，不需帳號。</p>
+      </section>
+    </main>
+
+    <!-- 底部導覽 -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="today"><span>🏠</span>今天</button>
+      <button class="nav-btn" data-view="diet"><span>🥗</span>飲食</button>
+      <button class="nav-btn" data-view="workout"><span>🏋️</span>訓練</button>
+      <button class="nav-btn" data-view="progress"><span>📈</span>進度</button>
+      <button class="nav-btn" data-view="settings"><span>⚙️</span>設定</button>
+    </nav>
+  </div>
+
+  <!-- 通用 Modal -->
+  <div id="modal-backdrop" class="modal-backdrop hidden"></div>
+  <div id="modal" class="modal hidden"></div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
