@@ -4,7 +4,7 @@ import { FOOD_CATEGORIES, WORKOUT_TEMPLATES } from './data.js';
 import * as engine from './engine.js';
 import * as charts from './charts.js';
 import { startVoiceRecognition, voiceSupported, stopVoiceRecognition } from './voice.js';
-import { pickPhoto, recognizeFood } from './photo.js';
+import { pickPhoto, recognizeFood, estimateFoodNutrition } from './photo.js';
 
 let state = store.loadState();
 let currentView = 'today';
@@ -520,7 +520,13 @@ function openCustomFood() {
   openModal(`
     <button class="close" data-close>✕</button>
     <h3>＋ 自訂食物</h3>
-    <label class="field"><span>名稱</span><input id="cf-name" placeholder="例如 黯然銷魂飯" /></label>
+    <p class="hint">輸入名稱後按「🤖 AI 估算」自動填入營養，或手動填寫。</p>
+    <label class="field"><span>名稱</span>
+      <div style="display:flex;gap:8px">
+        <input id="cf-name" placeholder="例如 乾炒牛河、黯然銷魂飯" style="flex:1" />
+        <button class="btn primary" data-ai-est style="white-space:nowrap">🤖 AI 估算</button>
+      </div>
+    </label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <label class="field"><span>熱量 (kcal)</span><input type="number" id="cf-kcal" placeholder="500" /></label>
       <label class="field"><span>蛋白質 (g)</span><input type="number" id="cf-p" placeholder="20" /></label>
@@ -528,8 +534,35 @@ function openCustomFood() {
       <label class="field"><span>脂肪 (g)</span><input type="number" id="cf-f" placeholder="15" /></label>
     </div>
     <label class="field"><span>份量單位</span><input id="cf-unit" placeholder="份／碗／件" value="份" /></label>
+    <p class="hint" id="cf-ai-status"></p>
     <button class="btn primary full" data-save-cf>儲存</button>
   `);
+
+  const aiBtn = $('#modal').querySelector('[data-ai-est]');
+  aiBtn.onclick = async () => {
+    const name = $('#cf-name').value.trim();
+    if (!name) { toast('請先輸入食物名稱'); return; }
+    if (!state.settings.apiKey) { toast('請先到「設定」填 API Key'); return; }
+    aiBtn.disabled = true;
+    aiBtn.textContent = '估算中…';
+    $('#cf-ai-status').textContent = '🤖 AI 估算中…';
+    try {
+      const est = await estimateFoodNutrition(name, state.settings.apiKey, state.settings.provider);
+      $('#cf-kcal').value = est.kcal;
+      $('#cf-p').value = est.protein;
+      $('#cf-c').value = est.carbs;
+      $('#cf-f').value = est.fat;
+      if (est.unit) $('#cf-unit').value = est.unit;
+      $('#cf-ai-status').textContent = `✅ 已估算：每${est.unit} ${est.kcal} kcal · 蛋白質 ${est.protein}g · 碳水 ${est.carbs}g · 脂肪 ${est.fat}g（可自行微調）`;
+      aiBtn.textContent = '🤖 重新估算';
+    } catch (e) {
+      $('#cf-ai-status').textContent = '❌ ' + e.message;
+      aiBtn.textContent = '🤖 AI 估算';
+    } finally {
+      aiBtn.disabled = false;
+    }
+  };
+
   $('#modal').querySelector('[data-save-cf]').onclick = () => {
     const name = $('#cf-name').value.trim();
     if (!name) { toast('請輸入名稱'); return; }
