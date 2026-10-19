@@ -32,6 +32,15 @@ function toast(msg, ms = 1800) {
   t._t = setTimeout(() => t.classList.add('hidden'), ms);
 }
 
+function switchView(name) {
+  currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(n => n.classList.toggle('active', n.dataset.view === name));
+  const view = $('#view-' + name);
+  if (view) view.classList.add('active');
+  if (name === 'settings') fillSettings();
+}
+
 function mealTotals(m) { return store.mealTotals(m); }
 
 function addMealEntry(food, amount, source, unitOverride) {
@@ -851,14 +860,11 @@ function openCustomFood() {
 // ---------- 事件綁定 ----------
 function bindEvents() {
   // 導覽
-  document.querySelectorAll('.nav-btn').forEach(b => b.onclick = () => {
-    currentView = b.dataset.view;
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
-    $('#view-' + currentView).classList.add('active');
-    b.classList.add('active');
-    if (currentView === 'settings') fillSettings();
-  });
+  document.querySelectorAll('.nav-btn').forEach(b => b.onclick = () => switchView(b.dataset.view));
+
+  // 免責聲明
+  $('#btn-disclaimer').onclick = () => switchView('disclaimer');
+  $('#btn-disclaimer-back').onclick = () => switchView('settings');
 
   // 快速動作
   $('[data-action="voice"]').onclick = onVoice;
@@ -960,7 +966,7 @@ function bindEvents() {
 // ---------- 啟動 ----------
 function init() {
   const fv = $('#footer-version');
-  if (fv) fv.textContent = 'GymBro.AI v1.7 · 資料只存在你這個瀏覽器，不需帳號。';
+  if (fv) fv.textContent = 'GymBro.AI v1.8 · 資料只存在你這個瀏覽器，不需帳號。';
   bindEvents();
   fillSettings();
   render();

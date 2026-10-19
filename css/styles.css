@@ -305,3 +305,8 @@ body {
 @media (min-width: 560px) {
   body { padding-top: 0; }
 }
+
+/* 免責聲明 */
+.disclaimer-body h3 { font-size: 14px; font-weight: 800; margin: 14px 0 4px; color: var(--accent); }
+.disclaimer-body p { font-size: 13px; color: var(--muted); margin-bottom: 6px; line-height: 1.6; }
+.disclaimer-body strong { color: var(--text); }
