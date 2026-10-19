@@ -8,6 +8,9 @@ export const FOOD_CATEGORIES = [
   { id: '水果', label: '🍎 水果' },
   { id: '飲料', label: '🧋 凍飲' },
   { id: '點心', label: '🥧 點心' },
+  { id: '壽司', label: '🍣 壽司' },
+  { id: '薄餅', label: '🍕 薄餅' },
+  { id: '家常菜', label: '🍲 家常菜' },
 ];
 
 // name, emoji, category, unit, kcal, protein, carbs, fat (per 1 serving)
@@ -82,6 +85,46 @@ export const FOOD_DB = [
   { name: '燒賣', emoji: '🥟', category: '點心', unit: '籠', kcal: 220, protein: 10, carbs: 20, fat: 10 },
   { name: '蝦餃', emoji: '🥟', category: '點心', unit: '籠', kcal: 240, protein: 10, carbs: 22, fat: 10 },
   { name: '糯米雞', emoji: '🍙', category: '點心', unit: '隻', kcal: 400, protein: 16, carbs: 55, fat: 12 },
+
+  // 壽司
+  { name: '三文魚壽司', emoji: '🍣', category: '壽司', unit: '件', kcal: 40, protein: 2, carbs: 6, fat: 1 },
+  { name: '吞拿魚壽司', emoji: '🍣', category: '壽司', unit: '件', kcal: 35, protein: 2.5, carbs: 6, fat: 0.5 },
+  { name: '甜蝦壽司', emoji: '🍤', category: '壽司', unit: '件', kcal: 30, protein: 2, carbs: 6, fat: 0.3 },
+  { name: '玉子壽司', emoji: '🍣', category: '壽司', unit: '件', kcal: 45, protein: 2, carbs: 7, fat: 1.5 },
+  { name: '加州卷', emoji: '🍣', category: '壽司', unit: '件', kcal: 50, protein: 2, carbs: 8, fat: 1.5 },
+  { name: '三文魚卷', emoji: '🍣', category: '壽司', unit: '件', kcal: 45, protein: 2, carbs: 7, fat: 1.5 },
+  { name: '軍艦卷', emoji: '🍣', category: '壽司', unit: '件', kcal: 50, protein: 2, carbs: 7, fat: 2 },
+  { name: '腐皮壽司', emoji: '🍣', category: '壽司', unit: '件', kcal: 60, protein: 3, carbs: 10, fat: 1.5 },
+  { name: '手卷', emoji: '🍣', category: '壽司', unit: '件', kcal: 80, protein: 4, carbs: 14, fat: 2 },
+  { name: '壽司拼盤', emoji: '🍱', category: '壽司', unit: '份', kcal: 250, protein: 12, carbs: 38, fat: 6 },
+  { name: '三文魚刺身', emoji: '🍣', category: '壽司', unit: '份(100g)', kcal: 208, protein: 20, carbs: 0, fat: 13 },
+  { name: '吞拿魚刺身', emoji: '🍣', category: '壽司', unit: '份(100g)', kcal: 144, protein: 24, carbs: 0, fat: 5 },
+
+  // 薄餅
+  { name: '瑪格麗特薄餅', emoji: '🍕', category: '薄餅', unit: '件', kcal: 200, protein: 8, carbs: 24, fat: 8 },
+  { name: '夏威夷薄餅', emoji: '🍕', category: '薄餅', unit: '件', kcal: 220, protein: 9, carbs: 25, fat: 10 },
+  { name: '至尊薄餅', emoji: '🍕', category: '薄餅', unit: '件', kcal: 250, protein: 11, carbs: 24, fat: 12 },
+  { name: '芝士薄餅', emoji: '🍕', category: '薄餅', unit: '件', kcal: 230, protein: 10, carbs: 22, fat: 12 },
+  { name: '薄餅(整個細)', emoji: '🍕', category: '薄餅', unit: '個', kcal: 700, protein: 28, carbs: 80, fat: 30 },
+
+  // 家常菜
+  { name: '番茄炒蛋', emoji: '🍅', category: '家常菜', unit: '碟', kcal: 280, protein: 14, carbs: 18, fat: 16 },
+  { name: '麻婆豆腐', emoji: '🌶️', category: '家常菜', unit: '碟', kcal: 300, protein: 16, carbs: 12, fat: 20 },
+  { name: '咕嚕肉', emoji: '🍖', category: '家常菜', unit: '碟', kcal: 450, protein: 20, carbs: 40, fat: 22 },
+  { name: '豉油雞', emoji: '🍗', category: '家常菜', unit: '碟', kcal: 350, protein: 30, carbs: 5, fat: 22 },
+  { name: '咖喱雞', emoji: '🍛', category: '家常菜', unit: '碟', kcal: 400, protein: 28, carbs: 20, fat: 22 },
+  { name: '薯仔炆雞翼', emoji: '🍗', category: '家常菜', unit: '碟', kcal: 380, protein: 24, carbs: 25, fat: 18 },
+  { name: '西蘭花炒牛肉', emoji: '🥦', category: '家常菜', unit: '碟', kcal: 300, protein: 22, carbs: 12, fat: 16 },
+  { name: '蠔油生菜', emoji: '🥬', category: '家常菜', unit: '碟', kcal: 60, protein: 2, carbs: 8, fat: 2.5 },
+  { name: '白灼蝦', emoji: '🍤', category: '家常菜', unit: '碟', kcal: 200, protein: 36, carbs: 2, fat: 5 },
+  { name: '蒜蓉蒸蝦', emoji: '🍤', category: '家常菜', unit: '碟', kcal: 220, protein: 30, carbs: 3, fat: 10 },
+  { name: '蒸水蛋', emoji: '🥚', category: '家常菜', unit: '碟', kcal: 150, protein: 12, carbs: 3, fat: 10 },
+  { name: '豉汁蒸排骨', emoji: '🍖', category: '家常菜', unit: '碟', kcal: 350, protein: 22, carbs: 5, fat: 26 },
+  { name: '節瓜粉絲蝦米', emoji: '🍲', category: '家常菜', unit: '碟', kcal: 180, protein: 8, carbs: 18, fat: 8 },
+  { name: '番茄薯仔湯', emoji: '🍲', category: '家常菜', unit: '碗', kcal: 120, protein: 4, carbs: 15, fat: 4 },
+  { name: '冬瓜湯', emoji: '🍲', category: '家常菜', unit: '碗', kcal: 80, protein: 2, carbs: 10, fat: 3 },
+  { name: '粟米湯', emoji: '🍲', category: '家常菜', unit: '碗', kcal: 150, protein: 4, carbs: 22, fat: 5 },
+  { name: '西洋菜湯', emoji: '🍲', category: '家常菜', unit: '碗', kcal: 70, protein: 3, carbs: 6, fat: 2 },
 ];
 
 export const WORKOUT_TEMPLATES = [

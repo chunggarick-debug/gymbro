@@ -380,6 +380,20 @@ function matchVoice(text) {
   }).sort((a, b) => b.name.length - a.name.length).slice(0, 6);
 }
 
+// 比對本地食物資料庫（拍照辨識命中就用資料庫的精準數值）
+function matchFoodDB(name) {
+  const norm = (s) => String(s || '').toLowerCase().replace(/[\s()（）·、,，.。／/]/g, '');
+  const n = norm(name);
+  if (!n) return null;
+  const foods = store.allFoods(state);
+  let hit = foods.find(f => norm(f.name) === n);
+  if (hit) return hit;
+  hit = foods.filter(f => norm(f.name).length >= 2 && n.includes(norm(f.name))).sort((a, b) => b.name.length - a.name.length)[0];
+  if (hit) return hit;
+  hit = foods.filter(f => n.length >= 2 && norm(f.name).includes(n)).sort((a, b) => a.name.length - b.name.length)[0];
+  return hit || null;
+}
+
 // 拍照流程
 function onPhoto() {
   openModal(`
@@ -407,17 +421,24 @@ function onPhoto() {
     $('#photo-area').innerHTML = `<img class="photo-preview" src="${dataUrl}" /><p style="color:var(--accent);font-weight:700">AI 辨識中…</p>`;
     try {
       const foods = await recognizeFood(dataUrl, state.settings.apiKey, state.settings.provider);
-      const norm = (f) => { const a = Math.max(0.1, Number(f.amount) || 1); return { name: f.name, emoji: f.emoji, unit: f.unit, kcal: (f.kcal || 0) / a, protein: (f.protein || 0) / a, carbs: (f.carbs || 0) / a, fat: (f.fat || 0) / a }; };
-      $('#photo-result').innerHTML = `<p class="hint">辨識結果，㩒一下加入：</p>` + foods.map((f, i) =>
-        `<button class="voice-result-item" data-pfood="${i}"><span>${f.emoji} ${f.name} ×${f.amount} ${f.unit}</span><span style="color:var(--muted)">${f.kcal} kcal</span></button>`
+      const items = foods.map((f) => {
+        const db = matchFoodDB(f.name);
+        if (db) {
+          return { name: db.name, emoji: db.emoji, unit: db.unit, amount: Number(f.amount) || 1, kcal: db.kcal, protein: db.protein, carbs: db.carbs, fat: db.fat, matched: true };
+        }
+        const a = Math.max(0.1, Number(f.amount) || 1);
+        return { name: f.name, emoji: '📷', unit: f.unit, amount: a, kcal: (f.kcal || 0) / a, protein: (f.protein || 0) / a, carbs: (f.carbs || 0) / a, fat: (f.fat || 0) / a, matched: false };
+      });
+      $('#photo-result').innerHTML = `<p class="hint">辨識結果（✅ = 已用資料庫精準數值），㩒一下加入：</p>` + items.map((f, i) =>
+        `<button class="voice-result-item" data-pfood="${i}"><span>${f.emoji} ${f.name}${f.matched ? ' ✅' : ''} ×${f.amount} ${f.unit}</span><span style="color:var(--muted)">${Math.round(f.kcal * f.amount)} kcal</span></button>`
       ).join('') + `<button class="btn primary full" style="margin-top:10px" data-addall>全部加入</button>`;
       $('#photo-result').querySelectorAll('[data-pfood]').forEach(b => b.onclick = () => {
-        const f = foods[Number(b.dataset.pfood)];
-        addMealEntry(norm(f), f.amount, 'photo', f.unit);
+        const f = items[Number(b.dataset.pfood)];
+        addMealEntry(f, f.amount, 'photo', f.unit);
         toast(`✅ 已記錄 ${f.name}`);
       });
       const addAll = $('#photo-result').querySelector('[data-addall]');
-      if (addAll) addAll.onclick = () => { foods.forEach(f => addMealEntry(norm(f), f.amount, 'photo', f.unit)); closeModal(); };
+      if (addAll) addAll.onclick = () => { items.forEach(f => addMealEntry(f, f.amount, 'photo', f.unit)); closeModal(); };
     } catch (e) {
       $('#photo-result').innerHTML = `<p style="color:var(--red);margin-top:10px;white-space:pre-wrap">${e.message}</p>
         <p class="hint">未設定金鑰？去「設定」貼上 API Key。</p>`;

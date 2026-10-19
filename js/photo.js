@@ -54,7 +54,7 @@ function downscale(dataUrl, maxSide) {
   });
 }
 
-const IMAGE_PROMPT = `你是一位香港註冊營養師。請辨識相片中的食物與大概份量（以香港常見份量估計，例如：碗、碟、件、隻、杯）。只回傳 JSON，格式如下，不要任何其他文字：
+const IMAGE_PROMPT = `你是一位香港食物辨識專家。請仔細辨識相片中的每一樣食物，用「香港常見名稱」描述（例如：叉燒飯、乾炒牛河、凍檸茶、蛋撻、燒味雙拼、雲吞麵）。不要加入品牌名，不要描述背景、餐具或裝飾。份量用香港常見單位估計（碗、碟、件、隻、杯、串）。若唔確定，寫最接近的常見食物。kcal 是相片中該食物「整份」的總熱量（amount 是份數）。只回傳 JSON，不要任何其他文字，格式：
 {"foods":[{"name":"食物名稱","amount":1,"unit":"碗","kcal":250,"protein":10,"carbs":30,"fat":8}]}`;
 
 // ---- 友好錯誤訊息 ----
@@ -85,6 +85,7 @@ async function deepSeekChat(content, apiKey, model = 'deepseek-flash') {
     model,
     messages: [{ role: 'user', content }],
     thinking: { type: 'disabled' },
+    temperature: 0,
     max_tokens: 2000,
   };
   let resp;
