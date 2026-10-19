@@ -1,13 +1,26 @@
 // ===== 拍照 + AI 辨識 / 食物營養估算（支援 DeepSeek 與 Gemini） =====
 
-// 從相機或相簿挑選照片，回傳縮圖 dataURL（最大邊 1024px）
-export function pickPhoto() {
+// 從相機或圖庫挑選照片，回傳縮圖 dataURL（最大邊 1024px）
+// source: 'camera'（開相機）| 'gallery'（開圖庫／檔案選擇）
+export function pickPhoto(source = 'camera') {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'environment';
+    if (source === 'camera') input.capture = 'environment';
+
+    let settled = false;
+    const onFocus = () => setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        window.removeEventListener('focus', onFocus);
+        reject(new Error('cancelled'));
+      }
+    }, 300);
+
     input.onchange = () => {
+      settled = true;
+      window.removeEventListener('focus', onFocus);
       const file = input.files && input.files[0];
       if (!file) { reject(new Error('no-file')); return; }
       const reader = new FileReader();
@@ -15,6 +28,8 @@ export function pickPhoto() {
       reader.onerror = () => reject(new Error('讀取圖片失敗'));
       reader.readAsDataURL(file);
     };
+
+    window.addEventListener('focus', onFocus);
     input.click();
   });
 }
@@ -42,6 +57,27 @@ function downscale(dataUrl, maxSide) {
 const IMAGE_PROMPT = `你是一位香港註冊營養師。請辨識相片中的食物與大概份量（以香港常見份量估計，例如：碗、碟、件、隻、杯）。只回傳 JSON，格式如下，不要任何其他文字：
 {"foods":[{"name":"食物名稱","amount":1,"unit":"碗","kcal":250,"protein":10,"carbs":30,"fat":8}]}`;
 
+// ---- 友好錯誤訊息 ----
+function apiError(provider, status, bodyText) {
+  let detail = '';
+  try {
+    const j = JSON.parse(bodyText);
+    detail = j?.error?.message || j?.error?.code || j?.message || '';
+  } catch (e) { /* ignore */ }
+
+  const map = {
+    400: '請求內容有問題（可能是圖片格式或大小）。',
+    401: 'API Key 無效，請檢查是否貼對、有沒有多空格。',
+    402: '帳戶餘額不足或配額用盡，請到平台儲值／檢查額度。',
+    403: '沒有權限（Key 被限制或地區不支援）。',
+    404: '模型名稱錯誤或不存在。',
+    413: '圖片太大，請換張細啲嘅相。',
+    429: '請求太頻繁，請等幾秒至一分鐘再試。',
+  };
+  const base = map[status] || `服務回傳錯誤 ${status}`;
+  return detail ? `${base}\n（${detail.slice(0, 160)}）` : base;
+}
+
 // ---- 共用：呼叫各家 API ----
 async function deepSeekChat(content, apiKey, model = 'deepseek-chat') {
   const url = 'https://api.deepseek.com/chat/completions';
@@ -63,7 +99,7 @@ async function deepSeekChat(content, apiKey, model = 'deepseek-chat') {
   }
   if (!resp.ok) {
     const t = await resp.text().catch(() => '');
-    throw new Error(`DeepSeek 回傳錯誤 ${resp.status}：${t.slice(0, 120)}`);
+    throw new Error(apiError('deepseek', resp.status, t));
   }
   const data = await resp.json();
   const text = data?.choices?.[0]?.message?.content || '';
@@ -89,7 +125,7 @@ async function geminiGenerate(parts, apiKey) {
   }
   if (!resp.ok) {
     const t = await resp.text().catch(() => '');
-    throw new Error(`Gemini 回傳錯誤 ${resp.status}：${t.slice(0, 120)}`);
+    throw new Error(apiError('gemini', resp.status, t));
   }
   const data = await resp.json();
   const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';

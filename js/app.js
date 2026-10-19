@@ -385,26 +385,32 @@ function onPhoto() {
   openModal(`
     <button class="close" data-close>✕</button>
     <h3>📷 影低你食嘅嘢</h3>
-    <p class="hint">需要喺「設定」填咗 Gemini API Key 先可以 AI 辨識。</p>
-    <div id="photo-area" style="text-align:center">
-      <button class="btn primary" data-shoot>📸 影相／揀相</button>
+    <p class="hint">需要喺「設定」填咗 API Key 先可以 AI 辨識。</p>
+    <div id="photo-area" style="text-align:center;display:flex;gap:10px;justify-content:center">
+      <button class="btn primary" data-shoot="camera">📸 影相</button>
+      <button class="btn ghost" data-shoot="gallery">🖼️ 從圖庫揀</button>
     </div>
     <div id="photo-result"></div>
   `);
-  $('#modal').querySelector('[data-shoot]').onclick = async () => {
-    const btn = $('#modal').querySelector('[data-shoot]');
-    btn.disabled = true; btn.textContent = '開啟相機…';
+
+  const shoot = async (source) => {
+    const btns = $('#modal').querySelectorAll('[data-shoot]');
+    btns.forEach(b => b.disabled = true);
     let dataUrl;
     try {
-      dataUrl = await pickPhoto();
-    } catch (e) { toast('取消或無法讀取相片'); btn.disabled = false; btn.textContent = '📸 影相／揀相'; return; }
+      dataUrl = await pickPhoto(source);
+    } catch (e) {
+      btns.forEach(b => b.disabled = false);
+      if (e && e.message !== 'cancelled') toast(e.message || '無法讀取相片');
+      return;
+    }
     $('#photo-area').innerHTML = `<img class="photo-preview" src="${dataUrl}" /><p style="color:var(--accent);font-weight:700">AI 辨識中…</p>`;
     try {
       const foods = await recognizeFood(dataUrl, state.settings.apiKey, state.settings.provider);
+      const norm = (f) => { const a = Math.max(0.1, Number(f.amount) || 1); return { name: f.name, emoji: f.emoji, unit: f.unit, kcal: (f.kcal || 0) / a, protein: (f.protein || 0) / a, carbs: (f.carbs || 0) / a, fat: (f.fat || 0) / a }; };
       $('#photo-result').innerHTML = `<p class="hint">辨識結果，㩒一下加入：</p>` + foods.map((f, i) =>
         `<button class="voice-result-item" data-pfood="${i}"><span>${f.emoji} ${f.name} ×${f.amount} ${f.unit}</span><span style="color:var(--muted)">${f.kcal} kcal</span></button>`
       ).join('') + `<button class="btn primary full" style="margin-top:10px" data-addall>全部加入</button>`;
-      const norm = (f) => { const a = Math.max(0.1, Number(f.amount) || 1); return { name: f.name, emoji: f.emoji, unit: f.unit, kcal: (f.kcal || 0) / a, protein: (f.protein || 0) / a, carbs: (f.carbs || 0) / a, fat: (f.fat || 0) / a }; };
       $('#photo-result').querySelectorAll('[data-pfood]').forEach(b => b.onclick = () => {
         const f = foods[Number(b.dataset.pfood)];
         addMealEntry(norm(f), f.amount, 'photo', f.unit);
@@ -413,10 +419,12 @@ function onPhoto() {
       const addAll = $('#photo-result').querySelector('[data-addall]');
       if (addAll) addAll.onclick = () => { foods.forEach(f => addMealEntry(norm(f), f.amount, 'photo', f.unit)); closeModal(); };
     } catch (e) {
-      $('#photo-result').innerHTML = `<p style="color:var(--red);margin-top:10px">${e.message}</p>
-        <p class="hint">未設定金鑰？去「設定」貼上 Gemini API Key。</p>`;
+      $('#photo-result').innerHTML = `<p style="color:var(--red);margin-top:10px;white-space:pre-wrap">${e.message}</p>
+        <p class="hint">未設定金鑰？去「設定」貼上 API Key。</p>`;
     }
   };
+
+  $('#modal').querySelectorAll('[data-shoot]').forEach(b => b.onclick = () => shoot(b.dataset.shoot));
 }
 
 // ---------- 訓練流程 ----------
