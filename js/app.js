@@ -13,6 +13,7 @@ let dietSearch = '';
 let restTimerId = null;
 let restRemaining = 0;
 let voiceRec = null;
+let historyDate = store.todayKey();
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -82,6 +83,55 @@ function render() {
   renderDiet();
   renderWorkout();
   renderProgress();
+  renderHistory();
+}
+
+function renderHistory() {
+  const days = Object.keys(state.logs)
+    .filter(k => (state.logs[k].meals.length > 0 || state.logs[k].workouts.length > 0))
+    .sort().reverse();
+  if (!days.includes(historyDate)) historyDate = store.todayKey();
+
+  $('#history-days').innerHTML = days.length
+    ? days.map(d => `<button class="cat-tab ${d === historyDate ? 'active' : ''}" data-day="${d}">${store.formatDateCN(d)}</button>`).join('')
+    : `<p class="hint">未有歷史記錄。</p>`;
+  $('#history-days').querySelectorAll('[data-day]').forEach(b => b.onclick = () => { historyDate = b.dataset.day; renderHistory(); });
+
+  $('#history-title').textContent = store.formatDateCN(historyDate);
+  const log = state.logs[historyDate] || { meals: [], workouts: [] };
+
+  $('#history-meals').innerHTML = `<p class="hint">🥗 飲食（${log.meals.length} 項）</p>` + (log.meals.map(m => {
+    const mt = store.mealTotals(m);
+    return `<div class="log-item">
+      <div class="li-main"><span class="li-emoji">${m.emoji}</span>
+        <div><div class="li-name">${m.name}${m.amount > 1 ? ` ×${m.amount}` : ''}</div>
+        <div class="li-sub">${m.unit} · ${Math.round(mt.kcal)} kcal</div></div></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn ghost" data-hedit="${m.id}" style="padding:4px 8px">✏️</button>
+        <button class="li-del" data-hdel="${m.id}">×</button>
+      </div>
+    </div>`;
+  }).join('') || `<p class="hint">無。</p>`);
+
+  $('#history-meals').querySelectorAll('[data-hedit]').forEach(b => b.onclick = () => openEditAmount(historyDate, b.dataset.hedit));
+  $('#history-meals').querySelectorAll('[data-hdel]').forEach(b => b.onclick = () => {
+    store.removeMeal(state, historyDate, b.dataset.hdel);
+    refresh();
+  });
+
+  $('#history-workouts').innerHTML = `<p class="hint">🏋️ 訓練（${log.workouts.length} 次）</p>` + (log.workouts.map(w =>
+    `<div class="log-item">
+      <div class="li-main"><span class="li-emoji">${w.emoji || '🏋️'}</span>
+        <div><div class="li-name">${w.templateName || '訓練'}</div>
+        <div class="li-sub">${w.exercises.length} 動作</div></div></div>
+      <button class="li-del" data-wdel="${w.id}">×</button>
+    </div>`
+  ).join('') || `<p class="hint">無。</p>`);
+
+  $('#history-workouts').querySelectorAll('[data-wdel]').forEach(b => b.onclick = () => {
+    store.removeWorkout(state, historyDate, b.dataset.wdel);
+    refresh();
+  });
 }
 
 function renderHeader() {
@@ -293,8 +343,8 @@ function onQuickFoodTap(name) {
 }
 
 // 編輯份量（點擊今日紀錄）
-function openEditAmount(mealId) {
-  const log = state.logs[store.todayKey()];
+function openEditAmount(dateKey, mealId) {
+  const log = state.logs[dateKey];
   const m = (log?.meals || []).find(x => x.id === mealId);
   if (!m) return;
   openModal(`
@@ -636,7 +686,7 @@ function openWorkoutSession(tpl) {
     const last = lastSetForExercise(ex.name);
     const pr = state.stats.prs[ex.name];
     let setsHtml = '';
-    for (let i = 0; i < ex.sets; i++) {
+    for (let i = 0; i < (ex.sets || 4); i++) {
       setsHtml += `<div class="set-row">
         <span class="set-no">${i + 1}</span>
         <input type="number" inputmode="decimal" class="set-w" placeholder="重量 kg" value="${last.weight}" />
@@ -645,12 +695,41 @@ function openWorkoutSession(tpl) {
       </div>`;
     }
     return `<div class="session-exercise" data-ex="${ex.name}">
-      <div class="se-head"><span class="se-name">${ex.name}</span>${pr ? `<span class="se-pr">PR ${pr}kg</span>` : `<span class="se-pr">目標 ${ex.reps}下</span>`}</div>
-      ${setsHtml}
+      <div class="se-head">
+        <span class="se-name">${ex.name}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${pr ? `<span class="se-pr">PR ${pr}kg</span>` : `<span class="se-pr">目標 ${ex.reps}下</span>`}
+          <button class="btn ghost" data-setminus style="padding:2px 9px">−組</button>
+          <button class="btn ghost" data-setplus style="padding:2px 9px">＋組</button>
+        </div>
+      </div>
+      <div class="set-list">${setsHtml}</div>
     </div>`;
   }).join('');
 
-  $('#modal').querySelectorAll('.set-done').forEach(b => b.onclick = () => b.classList.toggle('done'));
+  const bindSetDone = (row) => { const d = row.querySelector('.set-done'); if (d) d.onclick = () => d.classList.toggle('done'); };
+  const renumber = (list) => { list.querySelectorAll('.set-row').forEach((r, i) => { const no = r.querySelector('.set-no'); if (no) no.textContent = i + 1; }); };
+
+  $('#session-exercises').querySelectorAll('.session-exercise').forEach(card => {
+    const list = card.querySelector('.set-list');
+    card.querySelectorAll('.set-row').forEach(bindSetDone);
+    card.querySelector('[data-setplus]').onclick = () => {
+      const rows = list.querySelectorAll('.set-row');
+      const lastRow = rows[rows.length - 1];
+      const newRow = lastRow.cloneNode(true);
+      newRow.querySelector('.set-w').value = lastRow.querySelector('.set-w').value;
+      newRow.querySelector('.set-r').value = lastRow.querySelector('.set-r').value;
+      const d = newRow.querySelector('.set-done'); if (d) d.classList.remove('done');
+      list.appendChild(newRow);
+      bindSetDone(newRow);
+      renumber(list);
+    };
+    card.querySelector('[data-setminus]').onclick = () => {
+      const rows = list.querySelectorAll('.set-row');
+      if (rows.length > 1) { rows[rows.length - 1].remove(); renumber(list); }
+    };
+  });
+
   const restBtn = $('#modal').querySelector('[data-rest]');
   restBtn.onclick = () => startRest(restBtn);
 
@@ -805,7 +884,7 @@ function bindEvents() {
     const del = e.target.closest('[data-del]');
     if (del) { store.removeMeal(state, store.todayKey(), del.dataset.del); refresh(); return; }
     const m = e.target.closest('[data-meal]');
-    if (m) openEditAmount(m.dataset.meal);
+    if (m) openEditAmount(store.todayKey(), m.dataset.meal);
   });
   $('#btn-add-custom-food').onclick = openCustomFood;
 
@@ -881,7 +960,7 @@ function bindEvents() {
 // ---------- 啟動 ----------
 function init() {
   const fv = $('#footer-version');
-  if (fv) fv.textContent = 'GymBro.AI v1.6 · 資料只存在你這個瀏覽器，不需帳號。';
+  if (fv) fv.textContent = 'GymBro.AI v1.7 · 資料只存在你這個瀏覽器，不需帳號。';
   bindEvents();
   fillSettings();
   render();
