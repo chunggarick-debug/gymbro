@@ -337,6 +337,58 @@ function fillSettings() {
   $('#set-protein').value = state.settings.protein;
   $('#set-provider').value = state.settings.provider || 'deepseek';
   $('#set-apikey').value = state.settings.apiKey || '';
+  $('#td-gender').value = state.settings.gender || 'male';
+  $('#td-age').value = state.settings.age || '';
+  $('#td-height').value = state.settings.height || '';
+  $('#td-weight').value = state.settings.weight || '';
+  $('#td-activity').value = state.settings.activity || 'moderate';
+}
+
+function calcTDEE() {
+  const gender = $('#td-gender').value;
+  const age = Number($('#td-age').value);
+  const height = Number($('#td-height').value);
+  const weight = Number($('#td-weight').value);
+  const activity = $('#td-activity').value;
+  if (!age || !height || !weight || age <= 0 || height <= 0 || weight <= 0) {
+    toast('請正確填寫年齡、身高、體重');
+    return;
+  }
+  state.settings.gender = gender;
+  state.settings.age = age;
+  state.settings.height = height;
+  state.settings.weight = weight;
+  state.settings.activity = activity;
+  store.saveState(state);
+
+  const bmr = gender === 'female'
+    ? 10 * weight + 6.25 * height - 5 * age - 161
+    : 10 * weight + 6.25 * height - 5 * age + 5;
+  const factors = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
+  const tdee = bmr * (factors[activity] || 1.55);
+  const cut = Math.round(tdee - 500);
+  const maintain = Math.round(tdee);
+  const bulk = Math.round(tdee + 300);
+
+  $('#tdee-result').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="stat-item"><div class="sv">${Math.round(bmr)}</div><div class="sl">BMR 基礎代謝 (kcal)</div></div>
+      <div class="stat-item"><div class="sv">${maintain}</div><div class="sl">TDEE 總消耗 (kcal)</div></div>
+    </div>
+    <p class="hint" style="margin:0 0 8px">㩒一下套用為每日熱量目標：</p>
+    <div class="row-actions">
+      <button class="btn ghost" data-apply="${cut}">減脂 ${cut}</button>
+      <button class="btn ghost" data-apply="${maintain}">維持 ${maintain}</button>
+      <button class="btn ghost" data-apply="${bulk}">增肌 ${bulk}</button>
+    </div>
+  `;
+  $('#tdee-result').querySelectorAll('[data-apply]').forEach(b => b.onclick = () => {
+    state.settings.calories = Number(b.dataset.apply);
+    $('#set-calories').value = state.settings.calories;
+    store.saveState(state);
+    refresh();
+    toast('✅ 熱量目標已更新為 ' + b.dataset.apply + ' kcal');
+  });
 }
 
 // ---------- 食物加入流程 ----------
@@ -904,6 +956,7 @@ function bindEvents() {
   $('#pr-exercise-select').addEventListener('change', e => renderPRChart(e.target.value));
 
   // 設定
+  $('#btn-calc-tdee').onclick = calcTDEE;
   $('#btn-save-settings').onclick = () => {
     state.settings.name = $('#set-name').value.trim();
     state.settings.calories = Number($('#set-calories').value) || 2000;
@@ -966,7 +1019,7 @@ function bindEvents() {
 // ---------- 啟動 ----------
 function init() {
   const fv = $('#footer-version');
-  if (fv) fv.textContent = 'GymBro.AI v1.8 · 資料只存在你這個瀏覽器，不需帳號。';
+  if (fv) fv.textContent = 'GymBro.AI v1.9 · 資料只存在你這個瀏覽器，不需帳號。';
   bindEvents();
   fillSettings();
   render();
