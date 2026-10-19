@@ -79,13 +79,13 @@ function apiError(provider, status, bodyText) {
 }
 
 // ---- 共用：呼叫各家 API ----
-async function deepSeekChat(content, apiKey, model = 'deepseek-chat') {
+async function deepSeekChat(content, apiKey, model = 'deepseek-flash') {
   const url = 'https://api.deepseek.com/chat/completions';
   const body = {
     model,
     messages: [{ role: 'user', content }],
-    temperature: 0.1,
-    max_tokens: 1024,
+    thinking: { type: 'disabled' },
+    max_tokens: 2000,
   };
   let resp;
   try {
@@ -102,7 +102,8 @@ async function deepSeekChat(content, apiKey, model = 'deepseek-chat') {
     throw new Error(apiError('deepseek', resp.status, t));
   }
   const data = await resp.json();
-  const text = data?.choices?.[0]?.message?.content || '';
+  const msg = data?.choices?.[0]?.message || {};
+  const text = msg.content || msg.reasoning_content || '';
   if (!text) throw new Error('AI 無回傳結果，請再試一次。');
   return text;
 }
@@ -191,7 +192,7 @@ export async function estimateFoodNutrition(name, apiKey, provider = 'deepseek')
   if (provider === 'gemini') {
     text = await geminiGenerate([{ text: q }], apiKey);
   } else {
-    text = await deepSeekChat(q, apiKey, 'deepseek-chat');
+    text = await deepSeekChat(q, apiKey);
   }
 
   const obj = parseJSON(text);
