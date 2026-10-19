@@ -880,6 +880,8 @@ function bindEvents() {
 
 // ---------- 啟動 ----------
 function init() {
+  const fv = $('#footer-version');
+  if (fv) fv.textContent = 'GymBro.AI v1.6 · 資料只存在你這個瀏覽器，不需帳號。';
   bindEvents();
   fillSettings();
   render();
